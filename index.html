@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Brotato Clone</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            overflow: hidden; 
+            background: #1a1a2e; 
+            font-family: 'Segoe UI', sans-serif; 
+            color: white; 
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        canvas { display: block; }
+        
+        .overlay {
+            position: fixed; 
+            top: 0; left: 0; right: 0; bottom: 0;
+            width: 100%; 
+            height: 100%;
+            background: radial-gradient(circle, #333 0%, #000 100%);
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center;
+            z-index: 30;
+            text-align: center; 
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 20px 10px;
+        }
+        #shop, #game-over, #char-selection, #weapon-selection { display: none; }
+
+        /* TELA INICIAL - ESCOLHA PLATAFORMA */
+        #platform-selection {
+            display: flex;
+        }
+        #platform-selection h1 {
+            font-size: 48px;
+            margin-bottom: 10px;
+            text-shadow: 4px 4px #000, 0 0 30px #f1c40f;
+        }
+        #platform-selection .subtitle {
+            font-size: 18px;
+            color: #888;
+            margin-bottom: 40px;
+        }
+        .platform-container {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .platform-btn {
+            background: linear-gradient(180deg, #2a2a2a, #1a1a1a);
+            border: 4px solid #444;
+            border-radius: 20px;
+            padding: 30px 40px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 200px;
+        }
+        .platform-btn:hover {
+            border-color: #f1c40f;
+            transform: scale(1.05);
+            box-shadow: 0 0 30px #f1c40f55;
+        }
+        .platform-btn .icon {
+            font-size: 64px;
+            margin-bottom: 15px;
+        }
+        .platform-btn h2 {
+            font-size: 24px;
+            color: #f1c40f;
+            margin-bottom: 10px;
+        }
+        .platform-btn p {
+            font-size: 14px;
+            color: #888;
+        }
+
+        .shop-content {
+            width: 100%;
+            max-width: 1200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-bottom: 100px;
+        }
+
+        .container { 
+            display: flex; 
+            gap: 12px; 
+            margin-top: 20px; 
+            flex-wrap: wrap; 
+            justify-content: center; 
+            max-width: 900px; 
+            padding: 10px;
+            width: 100%;
+        }
+        .card {
+            background: #222; 
+            border: 3px solid #444; 
+            border-radius: 12px;
+            padding: 10px; 
+            text-align: center; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            width: 130px;
+            position: relative;
+            flex-shrink: 0;
+        }
+        .card:hover { 
+            border-color: #f1c40f; 
+            transform: scale(1.08) rotate(-2deg); 
+            background: #2a2a2a; 
+            box-shadow: 0 0 20px #f1c40f55;
+        }
+        .card.sell-card { border-color: #e67e22; }
+        .card.sell-card:hover { border-color: #d35400; box-shadow: 0 0 20px #e67e2255; }
+        .card.sold, .card.bought { opacity: 0.3; pointer-events: none; transform: scale(0.9); }
+        
+        .card img { 
+            width: 64px; 
+            height: 64px; 
+            object-fit: contain; 
+            image-rendering: pixelated;
+            transition: transform 0.3s ease;
+        }
+        .card:hover img { transform: scale(1.2) rotate(5deg); }
+        .card h3 { font-size: 14px; margin: 5px 0; color: #f1c40f; }
+        .card p { font-size: 11px; color: #bbb; margin: 3px 0; }
+        
+        #ui { 
+            position: fixed; 
+            top: 10px; 
+            left: 10px; 
+            pointer-events: none; 
+            z-index: 5; 
+        }
+        .hp-bar { 
+            width: 200px; 
+            height: 18px; 
+            background: #333; 
+            border: 2px solid #fff; 
+            border-radius: 9px; 
+            overflow: hidden; 
+        }
+        #hp-inner { 
+            width: 100%; 
+            height: 100%; 
+            background: linear-gradient(90deg, #e74c3c, #c0392b); 
+            transition: 0.2s; 
+        }
+        
+        #boss-bar { 
+            position: fixed; 
+            top: 50px; 
+            left: 50%; 
+            transform: translateX(-50%);
+            width: 400px; 
+            max-width: 90%;
+            height: 25px; 
+            background: #333; 
+            border: 3px solid #8e44ad; 
+            border-radius: 12px; 
+            overflow: hidden; 
+            display: none; 
+            z-index: 10;
+            animation: bossAppear 0.5s ease;
+        }
+        @keyframes bossAppear {
+            from { transform: translateX(-50%) scaleX(0); opacity: 0; }
+            to { transform: translateX(-50%) scaleX(1); opacity: 1; }
+        }
+        #boss-hp { 
+            width: 100%; 
+            height: 100%; 
+            background: linear-gradient(90deg, #9b59b6, #8e44ad); 
+            transition: 0.2s; 
+        }
+        #boss-name { 
+            position: absolute; 
+            width: 100%; 
+            text-align: center; 
+            line-height: 25px; 
+            font-weight: bold; 
+            text-shadow: 2px 2px #000; 
+        }
+        
+        #btn-go { 
+            padding: 15px 40px; 
+            background: linear-gradient(180deg, #2ecc71, #27ae60); 
+            color: white; 
+            border: none; 
+            border-radius: 8px; 
+            font-size: 18px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            margin: 30px auto 20px auto;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 0 #1e8449;
+            display: block;
+        }
+        #btn-go:hover { 
+            transform: translateY(-3px); 
+            box-shadow: 0 8px 0 #1e8449;
+        }
+        #btn-go:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #1e8449;
+        }
+
+        @keyframes fadeSlideIn {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .overlay h1 { 
+            animation: fadeSlideIn 0.5s ease;
+            margin: 10px 0;
+        }
+        .container { animation: fadeSlideIn 0.7s ease; }
+
+        #damage-overlay {
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%;
+            pointer-events: none; 
+            z-index: 20;
+            background: radial-gradient(circle, transparent 50%, #ff000055 100%);
+            opacity: 0; 
+            transition: opacity 0.1s;
+        }
+
+        #wave-announce {
+            position: fixed; 
+            top: 50%; 
+            left: 50%; 
+            transform: translate(-50%, -50%);
+            font-size: 48px; 
+            font-weight: bold; 
+            color: #f1c40f;
+            text-shadow: 4px 4px 0 #000, 0 0 30px #f1c40f;
+            opacity: 0; 
+            pointer-events: none; 
+            z-index: 25;
+        }
+
+        .section-title {
+            font-size: 22px; 
+            color: #f1c40f; 
+            margin: 20px 0 10px 0;
+            text-shadow: 2px 2px #000;
+            width: 100%;
+            text-align: center;
+        }
+        
+        .divider {
+            width: 80%; 
+            max-width: 600px;
+            height: 2px; 
+            background: linear-gradient(90deg, transparent, #f1c40f, transparent);
+            margin: 20px auto;
+        }
+
+        .coin-display {
+            font-size: 32px; 
+            font-weight: bold; 
+            color: #2ecc71;
+            text-shadow: 3px 3px #000, 0 0 15px #2ecc71;
+            margin: 15px 0;
+            background: rgba(46, 204, 113, 0.1);
+            padding: 10px 30px;
+            border-radius: 15px;
+            border: 3px solid #2ecc71;
+        }
+
+        .shop-info {
+            font-size: 16px;
+            color: #bbb;
+            margin: 10px 0;
+        }
+
+        /* ========== CONTROLES MOBILE ========== */
+        #mobile-controls {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 200px;
+            pointer-events: none;
+            z-index: 15;
+        }
+        
+        #joystick-area {
+            position: absolute;
+            left: 20px;
+            bottom: 20px;
+            width: 150px;
+            height: 150px;
+            pointer-events: auto;
+        }
+        
+        #joystick-base {
+            position: absolute;
+            width: 150px;
+            height: 150px;
+            background: rgba(255,255,255,0.1);
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+        }
+        
+        #joystick-thumb {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: radial-gradient(circle, #f1c40f, #d35400);
+            border: 3px solid #fff;
+            border-radius: 50%;
+            left: 45px;
+            top: 45px;
+            box-shadow: 0 0 20px rgba(241,196,15,0.5);
+            transition: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .platform-btn {
+                min-width: 150px;
+                padding: 20px 25px;
+            }
+            .platform-btn .icon {
+                font-size: 48px;
+            }
+            .platform-btn h2 {
+                font-size: 20px;
+            }
+            #platform-selection h1 {
+                font-size: 32px;
+            }
+            .coin-display {
+                font-size: 24px;
+                padding: 8px 20px;
+            }
+            .section-title {
+                font-size: 18px;
+            }
+            .card {
+                width: 100px;
+                padding: 8px;
+            }
+            .card img {
+                width: 48px;
+                height: 48px;
+            }
+            .card h3 {
+                font-size: 12px;
+            }
+            .card p {
+                font-size: 10px;
+            }
+            .hp-bar {
+                width: 150px;
+                height: 14px;
+            }
+            #wave-announce {
+                font-size: 36px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="damage-overlay"></div>
+    <div id="wave-announce">ONDA 1</div>
+
+    <!-- TELA INICIAL - ESCOLHA PLATAFORMA -->
+    <div id="platform-selection" class="overlay">
+        <h1>🥔 BROTATO</h1>
+        <p class="subtitle">Escolha como você quer jogar</p>
+        <div class="platform-container">
+            <div class="platform-btn" id="btn-pc">
+                <div class="icon">🖥️</div>
+                <h2>COMPUTADOR</h2>
+                <p>Use WASD ou setas<br>para mover</p>
+            </div>
+            <div class="platform-btn" id="btn-mobile">
+                <div class="icon">📱</div>
+                <h2>CELULAR</h2>
+                <p>Use o joystick virtual<br>na tela</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="char-selection" class="overlay">
+        <h1>🥔 ESCOLHA SEU PERSONAGEM</h1>
+        <div class="container" id="char-list"></div>
+    </div>
+
+    <div id="weapon-selection" class="overlay">
+        <h1>⚔️ ESCOLHA SUA ARMA INICIAL</h1>
+        <div class="container" id="weapon-start-list"></div>
+    </div>
+
+    <div id="ui" style="display:none">
+        <div class="hp-bar"><div id="hp-inner"></div></div>
+        <h2 id="hud-coins">🪙 0</h2>
+        <h3 id="hud-wave">ONDA 1</h3>
+        <p id="hud-kills">💀 Kills: 0</p>
+    </div>
+    
+    <div id="boss-bar">
+        <div id="boss-name">👹 BOSS</div>
+        <div id="boss-hp"></div>
+    </div>
+
+    <!-- CONTROLES MOBILE -->
+    <div id="mobile-controls">
+        <div id="joystick-area">
+            <div id="joystick-base"></div>
+            <div id="joystick-thumb"></div>
+        </div>
+    </div>
+
+    <div id="shop" class="overlay">
+        <div class="shop-content">
+            <h1>🛒 LOJA</h1>
+            <div class="coin-display">💰 <span id="shop-coins-val">0</span> Moedas</div>
+            <p class="shop-info">Armas equipadas: <span id="armas-count">1</span>/6</p>
+            
+            <div class="section-title">📦 SUAS ARMAS (Clique para vender por 60%)</div>
+            <div class="container" id="sell-items"></div>
+            
+            <div class="divider"></div>
+            
+            <div class="section-title">🛍️ COMPRAR ARMAS</div>
+            <div class="container" id="shop-items"></div>
+            
+            <button id="btn-go">PRÓXIMA ONDA ▶</button>
+        </div>
+    </div>
+
+    <div id="game-over" class="overlay">
+        <h1 style="color:#ff4444">💀 FIM DE JOGO</h1>
+        <p id="final-stats"></p>
+        <button onclick="location.reload()" style="padding:15px 30px; cursor:pointer; font-size: 18px; margin-top: 20px; background: #e74c3c; color: white; border: none; border-radius: 8px;">RECOMEÇAR</button>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+window.addEventListener('resize', () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+});
+
+// ==================== PLATAFORMA ====================
+let plataforma = 'pc'; // 'pc' ou 'mobile'
+let joystickAtivo = false;
+let joystickX = 0, joystickY = 0;
+
+document.getElementById('btn-pc').onclick = () => {
+    plataforma = 'pc';
+    document.getElementById('platform-selection').style.display = 'none';
+    document.getElementById('char-selection').style.display = 'flex';
+};
+
+document.getElementById('btn-mobile').onclick = () => {
+    plataforma = 'mobile';
+    document.getElementById('platform-selection').style.display = 'none';
+    document.getElementById('char-selection').style.display = 'flex';
+};
+
+// ==================== JOYSTICK MOBILE ====================
+const joystickArea = document.getElementById('joystick-area');
+const joystickThumb = document.getElementById('joystick-thumb');
+const joystickBase = document.getElementById('joystick-base');
+const maxDist = 50;
+
+function handleJoystickStart(e) {
+    e.preventDefault();
+    joystickAtivo = true;
+}
+
+function handleJoystickMove(e) {
+    if (!joystickAtivo) return;
+    e.preventDefault();
+    
+    const touch = e.touches ? e.touches[0] : e;
+    const rect = joystickBase.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    
+    let dx = touch.clientX - centerX;
+    let dy = touch.clientY - centerY;
+    
+    const dist = Math.hypot(dx, dy);
+    if (dist > maxDist) {
+        dx = dx / dist * maxDist;
+        dy = dy / dist * maxDist;
+    }
+    
+    joystickThumb.style.left = (45 + dx) + 'px';
+    joystickThumb.style.top = (45 + dy) + 'px';
+    
+    joystickX = dx / maxDist;
+    joystickY = dy / maxDist;
+}
+
+function handleJoystickEnd(e) {
+    e.preventDefault();
+    joystickAtivo = false;
+    joystickX = 0;
+    joystickY = 0;
+    joystickThumb.style.left = '45px';
+    joystickThumb.style.top = '45px';
+}
+
+joystickArea.addEventListener('touchstart', handleJoystickStart, { passive: false });
+joystickArea.addEventListener('touchmove', handleJoystickMove, { passive: false });
+joystickArea.addEventListener('touchend', handleJoystickEnd, { passive: false });
+joystickArea.addEventListener('touchcancel', handleJoystickEnd, { passive: false });
+
+// Mouse para teste no PC
+joystickArea.addEventListener('mousedown', handleJoystickStart);
+document.addEventListener('mousemove', (e) => { if(joystickAtivo) handleJoystickMove(e); });
+document.addEventListener('mouseup', handleJoystickEnd);
+
+// ==================== ASSETS ====================
+const assets = {};
+const loadImg = (name, src) => { assets[name] = new Image(); assets[name].src = src; };
+
+['floor', 'material'].forEach(img => loadImg(img, img + '.png'));
+['player', 'player1', 'player2', 'player3', 'player4'].forEach(p => loadImg(p, p + '.png'));
+['enemy', 'enemy1', 'enemy2', 'boss'].forEach(e => loadImg(e, e + '.png'));
+['faca', 'faca1', 'faca2', 'faca3'].forEach(f => loadImg(f, f + '.png'));
+['arma', 'arma1', 'arma2', 'arma3', 'arma4', 'arma5', 'arma6', 'arma7', 'arma8'].forEach(a => loadImg(a, a + '.png'));
+
+// ==================== VARIÁVEIS GLOBAIS ====================
+let moedas = 0, onda = 1, tempo = 25, estado = 'SELECAO_PLATAFORMA', kills = 0;
+let screenShake = 0;
+let lastDamageTime = 0;
+
+const player = { 
+    x: canvas.width/2, y: canvas.height/2, 
+    hp: 15, max: 15, vel: 6, danoMult: 1, 
+    armas: [], imgKey: null, cor: '#f39c12',
+    frame: 0, animTimer: 0, scale: 1, rotation: 0, isMoving: false, trail: [], invulnerable: 0
+};
+
+const inimigos = [], materiais = [], balas = [], teclas = {};
+const particulas = [], textosFlutuantes = [], flashEffects = [];
+
+let itensLojaAtual = [];
+let curaComprada = false;
+
+window.onkeydown = e => teclas[e.code] = true;
+window.onkeyup = e => teclas[e.code] = false;
+
+function atualizarMoedas() {
+    document.getElementById('shop-coins-val').innerText = moedas;
+    document.getElementById('hud-coins').innerText = '🪙 ' + moedas;
+}
+
+// ==================== SISTEMA DE PARTÍCULAS ====================
+class Particula {
+    constructor(x, y, cor, tipo) {
+        tipo = tipo || 'normal';
+        this.x = x; this.y = y; this.cor = cor; this.tipo = tipo; this.vida = 1; this.maxVida = 1;
+        if(tipo === 'explosao') { this.vx = (Math.random() - 0.5) * 12; this.vy = (Math.random() - 0.5) * 12; this.tamanho = Math.random() * 8 + 4; this.vida = 0.8; }
+        else if(tipo === 'sangue') { this.vx = (Math.random() - 0.5) * 8; this.vy = (Math.random() - 0.5) * 8; this.tamanho = Math.random() * 6 + 2; this.vida = 0.6; }
+        else if(tipo === 'moeda') { this.vx = (Math.random() - 0.5) * 4; this.vy = -Math.random() * 4 - 2; this.tamanho = Math.random() * 4 + 2; this.vida = 0.5; }
+        else if(tipo === 'hit') { this.vx = (Math.random() - 0.5) * 6; this.vy = (Math.random() - 0.5) * 6; this.tamanho = Math.random() * 10 + 5; this.vida = 0.3; }
+        else if(tipo === 'trail') { this.vx = 0; this.vy = 0; this.tamanho = Math.random() * 6 + 8; this.vida = 0.4; }
+        else if(tipo === 'cura') { this.vx = (Math.random() - 0.5) * 2; this.vy = -Math.random() * 3 - 1; this.tamanho = Math.random() * 4 + 3; this.vida = 1; }
+        else { this.vx = (Math.random() - 0.5) * 4; this.vy = (Math.random() - 0.5) * 4; this.tamanho = Math.random() * 5 + 2; }
+        this.maxVida = this.vida;
+    }
+    update() {
+        this.x += this.vx; this.y += this.vy; this.vida -= 0.02; this.vx *= 0.95; this.vy *= 0.95;
+        if(this.tipo === 'moeda' || this.tipo === 'cura') this.vy += 0.1;
+        return this.vida > 0;
+    }
+    draw() {
+        const alpha = this.vida / this.maxVida;
+        ctx.globalAlpha = alpha; ctx.fillStyle = this.cor; ctx.beginPath(); ctx.arc(this.x, this.y, this.tamanho * alpha, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+    }
+}
+
+class TextoFlutuante {
+    constructor(x, y, texto, cor, tamanho) {
+        tamanho = tamanho || 16;
+        this.x = x; this.y = y; this.texto = texto; this.cor = cor; this.tamanho = tamanho; this.vida = 1; this.vy = -2;
+    }
+    update() { this.y += this.vy; this.vida -= 0.02; this.vy *= 0.95; return this.vida > 0; }
+    draw() {
+        ctx.globalAlpha = this.vida; ctx.font = 'bold ' + this.tamanho + 'px Arial'; ctx.fillStyle = this.cor; ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
+        ctx.strokeText(this.texto, this.x, this.y); ctx.fillText(this.texto, this.x, this.y); ctx.globalAlpha = 1;
+    }
+}
+
+function criarExplosao(x, y, cor, quantidade, tipo) {
+    quantidade = quantidade || 15;
+    tipo = tipo || 'explosao';
+    for(let i = 0; i < quantidade; i++) particulas.push(new Particula(x, y, cor, tipo));
+}
+
+// ==================== TIPOS DE INIMIGOS ====================
+const tiposInimigos = {
+    fraco: { nome: 'Slime', img: 'enemy', hpBase: 8, velBase: 1.8, tam: 45, cor: '#27ae60', corBorda: '#1e8449', dano: 0.3, drops: 3 },
+    medio: { nome: 'Goblin', img: 'enemy1', hpBase: 20, velBase: 2.2, tam: 55, cor: '#e67e22', corBorda: '#d35400', dano: 0.5, drops: 6 },
+    forte: { nome: 'Ogro', img: 'enemy2', hpBase: 45, velBase: 1.4, tam: 70, cor: '#c0392b', corBorda: '#922b21', dano: 0.8, drops: 12 },
+    boss: { nome: 'BOSS', img: 'boss', hpBase: 150, velBase: 1.0, tam: 120, cor: '#8e44ad', corBorda: '#6c3483', dano: 1.2, drops: 50 }
+};
+
+function calcularStatsInimigo(tipo, ondaAtual) {
+    const base = tiposInimigos[tipo]; 
+    const mult = 1 + (ondaAtual - 1) * 0.15;
+    return { 
+        nome: base.nome, img: base.img, tam: base.tam, cor: base.cor, corBorda: base.corBorda, drops: base.drops,
+        hp: Math.floor(base.hpBase * mult), 
+        maxHp: Math.floor(base.hpBase * mult), 
+        vel: base.velBase + (ondaAtual - 1) * 0.05, 
+        dano: base.dano * (1 + (ondaAtual - 1) * 0.1) 
+    };
+}
+
+// ==================== PERSONAGENS ====================
+const personagens = [
+    { id: 'player', nome: 'Soldado', hp: 15, vel: 6, d: 1, desc: 'Equilibrado', cor: '#3498db' },
+    { id: 'player1', nome: 'Recruta', hp: 12, vel: 6.5, d: 1.1, desc: 'Ágil', cor: '#2ecc71' },
+    { id: 'player2', nome: 'Bebê', hp: 8, vel: 8, d: 0.8, desc: 'Muito rápido', cor: '#e91e63' },
+    { id: 'player3', nome: 'Cavalheiro', hp: 20, vel: 4.5, d: 1.4, desc: 'Tanque', cor: '#9b59b6' },
+    { id: 'player4', nome: 'Rei Batata', hp: 25, vel: 3.5, d: 1.8, desc: 'Lendário', cor: '#f1c40f' }
+];
+
+// ==================== CATÁLOGO DE ARMAS ====================
+const catalogo = [
+    { n: "Lâmina Sucata", p: 15, range: 120, dano: 8, fr: 400, imgName: 'faca', type: 'melee' },
+    { n: "Kunai Veloz", p: 25, range: 100, dano: 5, fr: 180, imgName: 'faca1', type: 'melee' },
+    { n: "Katana Elétrica", p: 60, range: 150, dano: 18, fr: 500, imgName: 'faca2', type: 'melee' },
+    { n: "Chave de Fenda", p: 20, range: 110, dano: 6, fr: 300, imgName: 'faca3', type: 'melee' },
+    { n: "Pistola", p: 15, range: 400, dano: 6, fr: 550, imgName: 'arma', type: 'gun' },
+    { n: "Revólver", p: 30, range: 380, dano: 12, fr: 900, imgName: 'arma1', type: 'gun' },
+    { n: "Pistola Laser", p: 40, range: 450, dano: 8, fr: 350, imgName: 'arma2', type: 'gun' },
+    { n: "Metralhadora", p: 50, range: 350, dano: 4, fr: 100, imgName: 'arma3', type: 'gun' },
+    { n: "Escopeta", p: 55, range: 250, dano: 22, fr: 1100, imgName: 'arma4', type: 'gun' },
+    { n: "MegaFone", p: 35, range: 320, dano: 7, fr: 400, imgName: 'arma5', type: 'gun' },
+    { n: "Rifle Plasma", p: 70, range: 500, dano: 15, fr: 280, imgName: 'arma6', type: 'gun' },
+    { n: "Canhão", p: 80, range: 450, dano: 30, fr: 1400, imgName: 'arma7', type: 'gun' },
+    { n: "Besta", p: 45, range: 600, dano: 25, fr: 1600, imgName: 'arma8', type: 'gun' }
+];
+
+// ==================== SELEÇÃO DE PERSONAGEM ====================
+personagens.forEach(function(c, index) {
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.style.animationDelay = (index * 0.1) + 's';
+    div.innerHTML = '<img src="' + c.id + '.png" alt="' + c.nome + '" onerror="this.style.display=\'none\'"><h3>' + c.nome + '</h3><p>❤️ ' + c.hp + ' | ⚡ ' + c.vel + ' | ⚔️ x' + c.d + '</p><p style="color:#888;font-size:10px;">' + c.desc + '</p>';
+    div.onclick = function() {
+        player.imgKey = c.id; player.cor = c.cor; player.max = player.hp = c.hp; player.vel = c.vel; player.danoMult = c.d;
+        document.getElementById('char-selection').style.display = 'none';
+        document.getElementById('weapon-selection').style.display = 'flex';
+        estado = 'SELECAO_ARMA';
+    };
+    document.getElementById('char-list').appendChild(div);
+});
+
+// ==================== SELEÇÃO DE ARMA ====================
+catalogo.forEach(function(w, index) {
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.style.animationDelay = (index * 0.05) + 's';
+    div.innerHTML = '<img src="' + w.imgName + '.png" alt="' + w.n + '" onerror="this.style.display=\'none\'"><h3>' + w.n + '</h3><p>⚔️ Dano: ' + w.dano + '</p><p>' + (w.type === 'melee' ? '🔪 Melee' : '🔫 Tiro') + '</p>';
+    div.onclick = function() {
+        player.armas.push({n: w.n, p: w.p, range: w.range, dano: w.dano, fr: w.fr, imgName: w.imgName, type: w.type, last: 0, offset: 0, flash: 0});
+        document.getElementById('weapon-selection').style.display = 'none';
+        document.getElementById('ui').style.display = 'block';
+        if(plataforma === 'mobile') {
+            document.getElementById('mobile-controls').style.display = 'block';
+        }
+        estado = 'JOGANDO';
+        anunciarOnda();
+        iniciarOnda();
+    };
+    document.getElementById('weapon-start-list').appendChild(div);
+});
+
+// ==================== BOTÃO PRÓXIMA ONDA ====================
+document.getElementById('btn-go').onclick = function() {
+    proximaOnda();
+};
+
+// ==================== ANÚNCIO DE ONDA ====================
+function anunciarOnda() {
+    const el = document.getElementById('wave-announce');
+    el.textContent = 'ONDA ' + onda;
+    el.style.opacity = 1; el.style.transform = 'translate(-50%, -50%) scale(1.5)'; el.style.transition = 'all 0.3s ease-out';
+    setTimeout(function() { el.style.transform = 'translate(-50%, -50%) scale(1)'; }, 100);
+    setTimeout(function() { el.style.opacity = 0; el.style.transform = 'translate(-50%, -50%) scale(0.5)'; }, 1500);
+}
+
+// ==================== SPAWN DE INIMIGOS ====================
+let spawnInterval = null;
+let bossSpawnado = false;
+
+function iniciarOnda() {
+    tempo = 25 + onda * 2; bossSpawnado = false;
+    document.getElementById('boss-bar').style.display = 'none';
+    if(spawnInterval) clearInterval(spawnInterval);
+    const intervalo = Math.max(400, 900 - onda * 50);
+    spawnInterval = setInterval(function() { if(estado === 'JOGANDO') spawnInimigo(); }, intervalo);
+}
+
+function spawnInimigo() {
+    let tipo; const chance = Math.random();
+    if(onda <= 2) tipo = 'fraco';
+    else if(onda <= 4) tipo = chance < 0.7 ? 'fraco' : 'medio';
+    else if(onda <= 6) { if(chance < 0.5) tipo = 'fraco'; else if(chance < 0.85) tipo = 'medio'; else tipo = 'forte'; }
+    else { if(chance < 0.3) tipo = 'fraco'; else if(chance < 0.7) tipo = 'medio'; else tipo = 'forte'; }
+    
+    const stats = calcularStatsInimigo(tipo, onda);
+    const lado = Math.floor(Math.random() * 4);
+    const margem = 60;
+    let x, y;
+    
+    switch(lado) {
+        case 0: x = Math.random() * canvas.width; y = margem; break;
+        case 1: x = canvas.width - margem; y = Math.random() * canvas.height; break;
+        case 2: x = Math.random() * canvas.width; y = canvas.height - margem; break;
+        case 3: x = margem; y = Math.random() * canvas.height; break;
+    }
+    
+    inimigos.push({ 
+        x: x, y: y, tipo: tipo, 
+        nome: stats.nome, img: assets[stats.img], tam: stats.tam, cor: stats.cor, corBorda: stats.corBorda,
+        hp: stats.hp, maxHp: stats.maxHp, vel: stats.vel, dano: stats.dano, drops: stats.drops,
+        animFrame: 0, animTimer: 0, scale: 1, hitFlash: 0, spawnAnim: 1 
+    });
+}
+
+function spawnBoss() {
+    if(bossSpawnado) return;
+    bossSpawnado = true;
+    screenShake = 20;
+    
+    const stats = calcularStatsInimigo('boss', onda);
+    const lado = Math.floor(Math.random() * 4);
+    const margem = 100;
+    let x, y;
+    
+    switch(lado) {
+        case 0: x = canvas.width / 2; y = margem; break;
+        case 1: x = canvas.width - margem; y = canvas.height / 2; break;
+        case 2: x = canvas.width / 2; y = canvas.height - margem; break;
+        case 3: x = margem; y = canvas.height / 2; break;
+    }
+    
+    inimigos.push({ 
+        x: x, y: y, tipo: 'boss', boss: true,
+        nome: stats.nome, img: assets.boss, tam: stats.tam, cor: stats.cor, corBorda: stats.corBorda,
+        hp: stats.hp, maxHp: stats.maxHp, vel: stats.vel, dano: stats.dano, drops: stats.drops,
+        animFrame: 0, animTimer: 0, scale: 1, hitFlash: 0, spawnAnim: 1 
+    });
+    
+    document.getElementById('boss-bar').style.display = 'block';
+    document.getElementById('boss-name').innerText = '👹 ' + stats.nome + ' - Onda ' + onda;
+    criarExplosao(x, y, '#8e44ad', 30, 'explosao');
+}
+
+// ==================== LOJA ====================
+function gerarItensLoja() {
+    const embaralhado = catalogo.slice().sort(function() { return 0.5 - Math.random(); });
+    const selecionados = embaralhado.slice(0, 5);
+    
+    itensLojaAtual = [];
+    for(let i = 0; i < selecionados.length; i++) {
+        const item = selecionados[i];
+        itensLojaAtual.push({
+            n: item.n, p: item.p, range: item.range, dano: item.dano,
+            fr: item.fr, imgName: item.imgName, type: item.type,
+            precoFinal: Math.floor(item.p * (1 + (onda - 1) * 0.1)),
+            comprado: false
+        });
+    }
+    curaComprada = false;
+}
+
+function abrirLoja() {
+    estado = 'LOJA';
+    if(spawnInterval) clearInterval(spawnInterval);
+    
+    const shopEl = document.getElementById('shop');
+    shopEl.style.display = 'flex';
+    shopEl.scrollTop = 0;
+    
+    if(itensLojaAtual.length === 0) {
+        gerarItensLoja();
+    }
+    
+    renderizarLoja();
+}
+
+function renderizarLoja() {
+    atualizarMoedas();
+    document.getElementById('armas-count').innerText = player.armas.length;
+    
+    const sellContainer = document.getElementById('sell-items');
+    sellContainer.innerHTML = '';
+    
+    if(player.armas.length === 0) {
+        sellContainer.innerHTML = '<p style="color:#888; width:100%; text-align:center; padding:20px;">Você não tem armas equipadas</p>';
+    } else {
+        for(let i = 0; i < player.armas.length; i++) {
+            (function(index) {
+                const arma = player.armas[index];
+                const valorVenda = Math.floor(arma.p * 0.6);
+                const card = document.createElement('div');
+                card.className = 'card sell-card';
+                card.innerHTML = '<img src="' + arma.imgName + '.png" alt="' + arma.n + '" onerror="this.style.display=\'none\'"><h3 style="color:#e67e22">' + arma.n + '</h3><p>⚔️ ' + arma.dano + '</p><p style="color:#2ecc71; font-weight:bold; font-size:13px;">💰 ' + valorVenda + '</p>';
+                card.onclick = function() {
+                    moedas += valorVenda;
+                    player.armas.splice(index, 1);
+                    renderizarLoja();
+                };
+                sellContainer.appendChild(card);
+            })(i);
+        }
+    }
+    
+    const container = document.getElementById('shop-items');
+    container.innerHTML = '';
+    
+    for(let i = 0; i < itensLojaAtual.length; i++) {
+        (function(index) {
+            const item = itensLojaAtual[index];
+            const card = document.createElement('div');
+            card.className = 'card' + (item.comprado ? ' bought' : '');
+            
+            let cardHTML = '<img src="' + item.imgName + '.png" alt="' + item.n + '" onerror="this.style.display=\'none\'"><h3>' + item.n + '</h3><p>⚔️ ' + item.dano + '</p><p style="color:#f1c40f; font-weight:bold; font-size:13px;">💰 ' + item.precoFinal + '</p>';
+            if(item.comprado) {
+                cardHTML += '<p style="color:#888;">VENDIDO</p>';
+            }
+            card.innerHTML = cardHTML;
+            
+            if(!item.comprado) {
+                card.onclick = function() {
+                    if(moedas >= item.precoFinal && player.armas.length < 6) {
+                        moedas -= item.precoFinal;
+                        player.armas.push({
+                            n: item.n, p: item.p, range: item.range, dano: item.dano,
+                            fr: item.fr, imgName: item.imgName, type: item.type,
+                            last: 0, offset: 0, flash: 0
+                        });
+                        itensLojaAtual[index].comprado = true;
+                        renderizarLoja();
+                    }
+                };
+            }
+            container.appendChild(card);
+        })(i);
+    }
+    
+    const custoCura = 10 + onda * 5;
+    const podeComprarCura = player.hp < player.max && !curaComprada;
+    
+    const curaCard = document.createElement('div');
+    curaCard.className = 'card' + (!podeComprarCura ? ' bought' : '');
+    curaCard.style.borderColor = '#e74c3c';
+    
+    let curaHTML = '<div style="width:64px;height:64px;margin:0 auto;background:linear-gradient(135deg,#e74c3c,#c0392b);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:32px;">❤️</div><h3>Cura Total</h3><p>Restaura HP</p><p style="color:#e74c3c; font-weight:bold; font-size:13px;">💰 ' + custoCura + '</p>';
+    if(curaComprada) {
+        curaHTML += '<p style="color:#888;">USADO</p>';
+    } else if(player.hp >= player.max) {
+        curaHTML += '<p style="color:#888;">HP CHEIO</p>';
+    }
+    curaCard.innerHTML = curaHTML;
+    
+    if(podeComprarCura) {
+        curaCard.onclick = function() {
+            if(moedas >= custoCura && player.hp < player.max) {
+                moedas -= custoCura;
+                player.hp = player.max;
+                curaComprada = true;
+                criarExplosao(player.x, player.y, '#2ecc71', 20, 'cura');
+                renderizarLoja();
+            }
+        };
+    }
+    container.appendChild(curaCard);
+}
+
+function proximaOnda() {
+    onda++;
+    estado = 'JOGANDO';
+    document.getElementById('shop').style.display = 'none';
+    inimigos.length = 0;
+    balas.length = 0;
+    player.x = canvas.width / 2;
+    player.y = canvas.height / 2;
+    
+    itensLojaAtual = [];
+    curaComprada = false;
+    
+    anunciarOnda();
+    iniciarOnda();
+}
+
+// ==================== UPDATE ====================
+function update() {
+    if(estado !== 'JOGANDO') return;
+    
+    let dx = 0, dy = 0;
+    
+    // PC - Teclado
+    if(plataforma === 'pc') {
+        if(teclas['KeyW'] || teclas['ArrowUp']) dy -= 1;
+        if(teclas['KeyS'] || teclas['ArrowDown']) dy += 1;
+        if(teclas['KeyA'] || teclas['ArrowLeft']) dx -= 1;
+        if(teclas['KeyD'] || teclas['ArrowRight']) dx += 1;
+    } else {
+        // Mobile - Joystick
+        dx = joystickX;
+        dy = joystickY;
+    }
+    
+    if(dx !== 0 && dy !== 0) { 
+        const mag = Math.hypot(dx, dy);
+        if(mag > 1) { dx /= mag; dy /= mag; }
+    }
+    
+    player.isMoving = dx !== 0 || dy !== 0;
+    if(player.isMoving && Math.random() > 0.7) particulas.push(new Particula(player.x, player.y, player.cor + '88', 'trail'));
+    
+    player.x += dx * player.vel; player.y += dy * player.vel;
+    player.x = Math.max(30, Math.min(canvas.width - 30, player.x));
+    player.y = Math.max(30, Math.min(canvas.height - 30, player.y));
+    
+    player.animTimer++;
+    if(player.animTimer > 8) { player.animTimer = 0; player.frame = (player.frame + 1) % 4; }
+    player.scale = 1 + Math.sin(Date.now() * 0.005) * 0.03;
+    if(player.invulnerable > 0) player.invulnerable--;
+
+    const agora = Date.now();
+    
+    for(let i = 0; i < player.armas.length; i++) {
+        const a = player.armas[i];
+        const orbitAng = agora * 0.002 + (i * Math.PI * 2 / player.armas.length);
+        a.curX = player.x + Math.cos(orbitAng) * 70;
+        a.curY = player.y + Math.sin(orbitAng) * 70;
+
+        let alvo = null, dMin = a.range;
+        for(let j = 0; j < inimigos.length; j++) {
+            const en = inimigos[j];
+            const d = Math.hypot(en.x - a.curX, en.y - a.curY);
+            if(d < dMin) { dMin = d; alvo = en; }
+        }
+
+        if(a.flash > 0) a.flash -= 0.1;
+
+        if(alvo) {
+            a.rot = Math.atan2(alvo.y - a.curY, alvo.x - a.curX);
+            if(agora - a.last > a.fr) {
+                const danoFinal = a.dano * player.danoMult;
+                if(a.type === 'melee') { 
+                    a.offset = 50; 
+                    alvo.hp -= danoFinal;
+                    alvo.hitFlash = 1;
+                    alvo.scale = 1.2;
+                    criarExplosao(alvo.x, alvo.y, '#fff', 5, 'hit');
+                    textosFlutuantes.push(new TextoFlutuante(alvo.x, alvo.y - 30, '-' + Math.floor(danoFinal), '#ff6b6b', 18));
+                } else { 
+                    balas.push({ x: a.curX, y: a.curY, vx: Math.cos(a.rot) * 16, vy: Math.sin(a.rot) * 16, dano: danoFinal, vida: 60, trail: [] });
+                    a.flash = 1;
+                    criarExplosao(a.curX, a.curY, '#f39c12', 3, 'hit');
+                }
+                a.last = agora;
+            }
+        } else {
+            a.rot = orbitAng + Math.PI/2;
+        }
+        a.offset = (a.offset || 0) * 0.75;
+    }
+
+    for(let i = balas.length - 1; i >= 0; i--) {
+        const b = balas[i];
+        b.trail.push({x: b.x, y: b.y, vida: 1});
+        if(b.trail.length > 8) b.trail.shift();
+        for(let t = 0; t < b.trail.length; t++) b.trail[t].vida -= 0.15;
+        b.x += b.vx; b.y += b.vy; b.vida--;
+        if(b.vida <= 0) { balas.splice(i, 1); continue; }
+        for(let j = inimigos.length - 1; j >= 0; j--) {
+            const en = inimigos[j];
+            if(Math.hypot(b.x - en.x, b.y - en.y) < en.tam / 2) { 
+                en.hp -= b.dano; 
+                en.hitFlash = 1;
+                en.scale = 1.15;
+                criarExplosao(b.x, b.y, '#fff', 8, 'hit');
+                textosFlutuantes.push(new TextoFlutuante(en.x, en.y - 30, '-' + Math.floor(b.dano), '#ff6b6b', 18));
+                balas.splice(i, 1); 
+                break; 
+            }
+        }
+    }
+    
+    for(let i = inimigos.length - 1; i >= 0; i--) {
+        const en = inimigos[i];
+        if(en.spawnAnim > 0) en.spawnAnim -= 0.05;
+        if(en.hitFlash > 0) en.hitFlash -= 0.1;
+        en.scale = en.scale * 0.9 + 1 * 0.1;
+        en.animTimer++;
+        if(en.animTimer > 10) { en.animTimer = 0; en.animFrame = (en.animFrame + 1) % 2; }
+        
+        if(en.hp <= 0) {
+            kills++;
+            document.getElementById('hud-kills').innerText = '💀 Kills: ' + kills;
+            const tipo = tiposInimigos[en.tipo];
+            criarExplosao(en.x, en.y, tipo.cor, en.boss ? 40 : 15, 'explosao');
+            screenShake = en.boss ? 15 : 5;
+            
+            const drops = en.drops;
+            for(let d = 0; d < drops; d++) {
+                materiais.push({ 
+                    x: en.x + (Math.random() - 0.5) * 50, 
+                    y: en.y + (Math.random() - 0.5) * 50, 
+                    scale: 0, 
+                    rotation: Math.random() * Math.PI * 2,
+                    valor: 1
+                });
+            }
+            
+            if(en.boss) { 
+                document.getElementById('boss-bar').style.display = 'none'; 
+                setTimeout(function() { abrirLoja(); }, 500); 
+            }
+            inimigos.splice(i, 1);
+            continue;
+        }
+        
+        const ang = Math.atan2(player.y - en.y, player.x - en.x);
+        en.x += Math.cos(ang) * en.vel;
+        en.y += Math.sin(ang) * en.vel;
+        
+        if(Math.hypot(player.x - en.x, player.y - en.y) < 35 + en.tam/2) {
+            if(player.invulnerable <= 0) {
+                player.hp -= en.dano;
+                player.invulnerable = 10;
+                player.scale = 0.8;
+                screenShake = 3;
+                lastDamageTime = Date.now();
+                document.getElementById('damage-overlay').style.opacity = 0.5;
+                setTimeout(function() { document.getElementById('damage-overlay').style.opacity = 0; }, 100);
+            }
+        }
+    }
+
+    for(let i = materiais.length - 1; i >= 0; i--) {
+        const m = materiais[i];
+        m.scale = Math.min(1, (m.scale || 0) + 0.1);
+        m.rotation = (m.rotation || 0) + 0.05;
+        const dist = Math.hypot(player.x - m.x, player.y - m.y);
+        if(dist < 180) { m.x += (player.x - m.x) * 0.12; m.y += (player.y - m.y) * 0.12; }
+        if(dist < 30) { 
+            moedas += (m.valor || 1);
+            criarExplosao(m.x, m.y, '#2ecc71', 5, 'moeda');
+            textosFlutuantes.push(new TextoFlutuante(m.x, m.y - 20, '+' + (m.valor || 1), '#2ecc71', 14));
+            materiais.splice(i, 1);
+            atualizarMoedas();
+        }
+    }
+
+    for(let i = particulas.length - 1; i >= 0; i--) { if(!particulas[i].update()) particulas.splice(i, 1); }
+    for(let i = textosFlutuantes.length - 1; i >= 0; i--) { if(!textosFlutuantes[i].update()) textosFlutuantes.splice(i, 1); }
+
+    let boss = null;
+    for(let i = 0; i < inimigos.length; i++) {
+        if(inimigos[i].boss) { boss = inimigos[i]; break; }
+    }
+    if(boss) document.getElementById('boss-hp').style.width = (boss.hp / boss.maxHp * 100) + '%';
+
+    if(screenShake > 0) screenShake *= 0.9;
+
+    if(player.hp <= 0) {
+        estado = 'GAMEOVER';
+        if(spawnInterval) clearInterval(spawnInterval);
+        criarExplosao(player.x, player.y, player.cor, 50, 'explosao');
+        document.getElementById('game-over').style.display = 'flex';
+        document.getElementById('mobile-controls').style.display = 'none';
+        document.getElementById('final-stats').innerHTML = 'Você chegou até a <b>Onda ' + onda + '</b>!<br>💀 Kills: ' + kills + ' | 🪙 Moedas: ' + moedas;
+    }
+    
+    document.getElementById('hp-inner').style.width = (player.hp / player.max * 100) + '%';
+    document.getElementById('hud-wave').innerText = 'ONDA ' + onda + ' - ' + Math.max(0, tempo) + 's';
+}
+
+// ==================== DRAW ====================
+function desenharPlayer() {
+    const img = assets[player.imgKey];
+    const offsetY = player.isMoving ? Math.sin(Date.now() * 0.02) * 3 : 0;
+    if(player.invulnerable > 0 && Math.floor(player.invulnerable / 2) % 2 === 0) ctx.globalAlpha = 0.5;
+    if(img && img.complete && img.naturalWidth > 0) {
+        ctx.save(); ctx.translate(player.x, player.y + offsetY); ctx.scale(player.scale, player.scale);
+        ctx.drawImage(img, -30, -30, 60, 60); ctx.restore();
+    } else {
+        ctx.save(); ctx.translate(player.x, player.y + offsetY); ctx.scale(player.scale, player.scale);
+        ctx.fillStyle = player.cor; ctx.beginPath(); ctx.arc(0, 0, 25, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#222'; ctx.lineWidth = 3; ctx.stroke();
+        ctx.fillStyle = 'white'; ctx.beginPath();
+        ctx.arc(-8, -5, 5, 0, Math.PI * 2); ctx.arc(8, -5, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#333'; ctx.beginPath();
+        ctx.arc(-8 + (player.isMoving ? 2 : 0), -5, 3, 0, Math.PI * 2);
+        ctx.arc(8 + (player.isMoving ? 2 : 0), -5, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+}
+
+function desenharInimigo(en) {
+    const tipo = tiposInimigos[en.tipo];
+    const img = assets[tipo.img];
+    const offsetY = Math.sin(Date.now() * 0.003 + en.x) * 3;
+    const spawnScale = 1 - en.spawnAnim;
+    ctx.save(); ctx.translate(en.x, en.y + offsetY); ctx.scale(en.scale * spawnScale, en.scale * spawnScale);
+    if(en.hitFlash > 0) ctx.globalAlpha = 1;
+    if(img && img.complete && img.naturalWidth > 0) {
+        ctx.drawImage(img, -en.tam/2, -en.tam/2, en.tam, en.tam);
+        if(en.hitFlash > 0) {
+            ctx.globalCompositeOperation = 'source-atop';
+            ctx.fillStyle = 'rgba(255,255,255,' + en.hitFlash + ')';
+            ctx.fillRect(-en.tam/2, -en.tam/2, en.tam, en.tam);
+            ctx.globalCompositeOperation = 'source-over';
+        }
+    } else {
+        ctx.fillStyle = en.hitFlash > 0.5 ? '#fff' : tipo.cor;
+        ctx.beginPath(); ctx.arc(0, 0, en.tam/2, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = tipo.corBorda; ctx.lineWidth = 3; ctx.stroke();
+        const eyeOffset = en.animFrame * 2;
+        ctx.fillStyle = '#fff'; ctx.beginPath();
+        ctx.arc(-en.tam/5, -5, en.tam/8, 0, Math.PI * 2);
+        ctx.arc(en.tam/5, -5, en.tam/8, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#c0392b'; ctx.beginPath();
+        ctx.arc(-en.tam/5 + eyeOffset, -5, en.tam/16, 0, Math.PI * 2);
+        ctx.arc(en.tam/5 + eyeOffset, -5, en.tam/16, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+    if(!en.boss) {
+        const barWidth = 40; const hpPercent = en.hp / en.maxHp;
+        ctx.fillStyle = '#333'; ctx.fillRect(en.x - barWidth/2, en.y - en.tam/2 - 15, barWidth, 6);
+        ctx.fillStyle = hpPercent > 0.3 ? '#2ecc71' : '#e74c3c';
+        ctx.fillRect(en.x - barWidth/2, en.y - en.tam/2 - 15, barWidth * hpPercent, 6);
+    }
+}
+
+function desenharArma(a) {
+    ctx.save();
+    const drawX = a.curX + Math.cos(a.rot) * (a.offset || 0);
+    const drawY = a.curY + Math.sin(a.rot) * (a.offset || 0);
+    ctx.translate(drawX, drawY); ctx.rotate(a.rot + (a.type === 'melee' ? Math.PI/4 : 0));
+    if(a.flash > 0) {
+        ctx.fillStyle = 'rgba(255, 200, 50, ' + a.flash + ')';
+        ctx.beginPath(); ctx.arc(20, 0, 15 * a.flash, 0, Math.PI * 2); ctx.fill();
+    }
+    const img = assets[a.imgName];
+    if(img && img.complete && img.naturalWidth > 0) {
+        ctx.drawImage(img, -25, -15, 50, 30);
+    } else {
+        ctx.fillStyle = a.type === 'melee' ? '#bdc3c7' : '#7f8c8d';
+        ctx.fillRect(-20, -6, 40, 12);
+        ctx.fillStyle = '#34495e'; ctx.fillRect(-25, -4, 10, 8);
+    }
+    ctx.restore();
+}
+
+function draw() {
+    ctx.save();
+    if(screenShake > 0.5) ctx.translate((Math.random() - 0.5) * screenShake, (Math.random() - 0.5) * screenShake);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    if(assets.floor && assets.floor.complete && assets.floor.naturalWidth > 0) {
+        ctx.fillStyle = ctx.createPattern(assets.floor, 'repeat');
+        ctx.fillRect(-10, -10, canvas.width + 20, canvas.height + 20);
+    } else {
+        ctx.fillStyle = '#1a1a2e'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = '#252540';
+        for(let x = 0; x < canvas.width; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
+        for(let y = 0; y < canvas.height; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
+    }
+    
+    for(let i = 0; i < particulas.length; i++) particulas[i].draw();
+    
+    for(let i = 0; i < materiais.length; i++) {
+        const m = materiais[i];
+        const scale = m.scale || 1;
+        const glow = Math.sin(Date.now() * 0.01 + m.x) * 0.3 + 0.7;
+        ctx.save(); ctx.translate(m.x, m.y); ctx.rotate(m.rotation || 0); ctx.scale(scale, scale);
+        ctx.fillStyle = 'rgba(46, 204, 113, ' + (glow * 0.4) + ')';
+        ctx.beginPath(); ctx.arc(0, 0, 18, 0, Math.PI * 2); ctx.fill();
+        if(assets.material && assets.material.complete && assets.material.naturalWidth > 0) {
+            ctx.drawImage(assets.material, -12, -12, 24, 24);
+        } else {
+            ctx.fillStyle = '#2ecc71'; ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#27ae60'; ctx.beginPath(); ctx.arc(-2, -2, 3, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.restore();
+    }
+    
+    for(let i = 0; i < inimigos.length; i++) desenharInimigo(inimigos[i]);
+    
+    for(let i = 0; i < balas.length; i++) {
+        const b = balas[i];
+        for(let j = 0; j < b.trail.length; j++) {
+            const t = b.trail[j];
+            if(t.vida > 0) {
+                ctx.globalAlpha = t.vida * 0.5;
+                ctx.fillStyle = '#f39c12'; ctx.beginPath(); ctx.arc(t.x, t.y, 4 * t.vida, 0, Math.PI * 2); ctx.fill();
+            }
+        }
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = '#f39c12'; ctx.beginPath(); ctx.arc(b.x, b.y, 6, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(b.x, b.y, 3, 0, Math.PI * 2); ctx.fill();
+    }
+    
+    if(estado === 'JOGANDO' || estado === 'LOJA') desenharPlayer();
+    for(let i = 0; i < player.armas.length; i++) desenharArma(player.armas[i]);
+    for(let i = 0; i < textosFlutuantes.length; i++) textosFlutuantes[i].draw();
+    ctx.restore();
+    update();
+    requestAnimationFrame(draw);
+}
+
+setInterval(function() {
+    if(estado === 'JOGANDO') {
+        if(tempo > 0) tempo--;
+        else if(!bossSpawnado) { clearInterval(spawnInterval); spawnBoss(); }
+    }
+}, 1000);
+
+draw();
+console.log("🎮 Jogo carregado! Suporte PC e Mobile!");
+</script>
+</body>
+</html>
